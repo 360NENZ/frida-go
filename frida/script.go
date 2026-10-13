@@ -173,7 +173,7 @@ func getRPCIDFromMessage(message string) (string, any, error) {
 }
 
 func (s *Script) hijackFn(message string, data []byte) {
-	if strings.Contains(message, "frida:rpc") {
+	if strings.Contains(message, "meshlink:rpc") {
 		rpcID, ret, err := getRPCIDFromMessage(message)
 		if err != nil {
 			panic(err)
@@ -202,7 +202,7 @@ func (s *Script) hijackFn(message string, data []byte) {
 func newRPCCall(fnName string) []any {
 	id := uuid.New()
 	dt := []any{
-		"frida:rpc",
+		"meshlink:rpc",
 		id.String()[:16],
 		"call",
 		fnName,
