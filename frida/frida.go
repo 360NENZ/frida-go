@@ -7,8 +7,9 @@
 package frida
 
 /*
-#cgo LDFLAGS: -lfrida-core -lm -ldl
-#cgo CFLAGS: -I/usr/local/include/ -w
+#cgo pkg-config: frida-core-1.0
+#cgo LDFLAGS: -lm -ldl
+#cgo CFLAGS: -w
 #cgo darwin LDFLAGS: -lbsm -framework Foundation -framework AppKit -lresolv -lpthread
 #cgo darwin CFLAGS: -Wno-error=incompatible-function-pointer-types
 #cgo android LDFLAGS: -llog

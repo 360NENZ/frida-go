@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"reflect"
 	"runtime"
-	"strings"
 	"sync"
 	"unsafe"
 
@@ -148,62 +147,47 @@ func (s *Script) On(sigName string, fn any) {
 	}
 }
 
-func getRPCIDFromMessage(message string) (string, any, error) {
-	unmarshalled := make(map[string]any)
-	if err := json.Unmarshal([]byte(message), &unmarshalled); err != nil {
-		return "", nil, err
+func getRPCResponse(message string) (string, any, bool) {
+	var envelope struct {
+		Type    string `json:"type"`
+		Payload []any  `json:"payload"`
 	}
-
-	var rpcID string
-	var ret any
-
-	loopMap := func(mp map[string]any) {
-		for _, v := range mp {
-			if reflect.ValueOf(v).Kind() == reflect.Slice {
-				slc := v.([]any)
-				rpcID = slc[1].(string)
-				ret = slc[3]
-
-			}
-		}
+	if json.Unmarshal([]byte(message), &envelope) != nil ||
+		envelope.Type != "send" || len(envelope.Payload) < 3 {
+		return "", nil, false
 	}
-	loopMap(unmarshalled)
-
-	return rpcID, ret, nil
+	id, idOK := envelope.Payload[0].(string)
+	status, statusOK := envelope.Payload[1].(string)
+	if !idOK || !statusOK || (status != "ok" && status != "error") {
+		return "", nil, false
+	}
+	return id, envelope.Payload[2], true
 }
 
 func (s *Script) hijackFn(message string, data []byte) {
-	if strings.Contains(message, "meshlink:rpc") {
-		rpcID, ret, err := getRPCIDFromMessage(message)
-		if err != nil {
-			panic(err)
+	if rpcID, ret, valid := getRPCResponse(message); valid {
+		if callerCh, ok := rpcCalls.LoadAndDelete(rpcID); ok {
+			ch := callerCh.(chan any)
+			ch <- ret
+			close(ch)
+			return
 		}
-		callerCh, ok := rpcCalls.Load(rpcID)
-		if !ok {
-			panic("rpc-id not found")
-		}
-		ch := callerCh.(chan any)
-		ch <- ret
-		close(ch)
-
-	} else {
-		var args []reflect.Value
-		switch s.fn.Type().NumIn() {
-		case 1:
-			args = append(args, reflect.ValueOf(message))
-		case 2:
-			args = append(args, reflect.ValueOf(message))
-			args = append(args, reflect.ValueOf(data))
-		}
-		s.fn.Call(args)
 	}
+	var args []reflect.Value
+	switch s.fn.Type().NumIn() {
+	case 1:
+		args = append(args, reflect.ValueOf(message))
+	case 2:
+		args = append(args, reflect.ValueOf(message))
+		args = append(args, reflect.ValueOf(data))
+	}
+	s.fn.Call(args)
 }
 
 func newRPCCall(fnName string) []any {
 	id := uuid.New()
 	dt := []any{
-		"meshlink:rpc",
-		id.String()[:16],
+		id.String(),
 		"call",
 		fnName,
 	}
@@ -230,7 +214,7 @@ func (s *Script) makeExportsCall(fn string, args ...any) chan any {
 	}
 
 	ch := make(chan any)
-	rpcCalls.Store(rpcData[1], ch)
+	rpcCalls.Store(rpcData[0], ch)
 
 	bt, _ := json.Marshal(rpc)
 	s.Post(string(bt), nil)
