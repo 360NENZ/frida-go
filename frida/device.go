@@ -43,7 +43,8 @@ type DeviceInt interface {
 
 // Device represents Device struct from frida-core
 type Device struct {
-	device *C.FridaDevice
+	device  *C.FridaDevice
+	manager *DeviceManager
 }
 
 // ID will return the ID of the device.
@@ -92,13 +93,9 @@ func (d *Device) Bus() *Bus {
 	return nil
 }
 
-// Manager returns device manager for the device.
+// Manager returns the manager that supplied this device, if known.
 func (d *Device) Manager() *DeviceManager {
-	if d.device != nil {
-		mgr := C.frida_device_get_manager(d.device)
-		return &DeviceManager{mgr}
-	}
-	return nil
+	return d.manager
 }
 
 // IsLost returns boolean whether device is lost or not.

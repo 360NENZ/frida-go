@@ -59,7 +59,7 @@ func (d *DeviceManager) EnumerateDevices() ([]DeviceInt, error) {
 
 	for i := 0; i < numDevices; i++ {
 		device := C.frida_device_list_get(deviceList, C.gint(i))
-		devices[i] = &Device{device}
+		devices[i] = &Device{device: device, manager: d}
 	}
 
 	clean(unsafe.Pointer(deviceList), unrefFrida)
@@ -94,7 +94,7 @@ func (d *DeviceManager) DeviceByID(id string) (DeviceInt, error) {
 	if err != nil {
 		return nil, &FError{err}
 	}
-	return &Device{device: device}, nil
+	return &Device{device: device, manager: d}, nil
 }
 
 // DeviceByType will return device or an error by device type specified.
@@ -109,7 +109,7 @@ func (d *DeviceManager) DeviceByType(devType DeviceType) (DeviceInt, error) {
 	if err != nil {
 		return nil, &FError{err}
 	}
-	return &Device{device: device}, nil
+	return &Device{device: device, manager: d}, nil
 }
 
 // FindDeviceByID will try to find the device by id specified
@@ -130,7 +130,7 @@ func (d *DeviceManager) FindDeviceByID(id string) (DeviceInt, error) {
 		return nil, &FError{err}
 	}
 
-	return &Device{device: device}, nil
+	return &Device{device: device, manager: d}, nil
 }
 
 // FindDeviceByType will try to find the device by device type specified
@@ -148,7 +148,7 @@ func (d *DeviceManager) FindDeviceByType(devType DeviceType) (DeviceInt, error) 
 		return nil, &FError{err}
 	}
 
-	return &Device{device: device}, nil
+	return &Device{device: device, manager: d}, nil
 }
 
 // AddRemoteDevice add a remote device from the provided address with remoteOpts populated
@@ -162,7 +162,7 @@ func (d *DeviceManager) AddRemoteDevice(address string, remoteOpts *RemoteDevice
 		return nil, &FError{err}
 	}
 
-	return &Device{device: device}, nil
+	return &Device{device: device, manager: d}, nil
 }
 
 // RemoveRemoteDevice removes remote device available at address
