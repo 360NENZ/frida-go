@@ -297,7 +297,7 @@ func (d *Device) EnumerateProcesses(scope Scope) ([]*Process, error) {
 func (d *Device) EnableSpawnGating() error {
 	if d.device != nil {
 		var err *C.GError
-		C.frida_device_enable_spawn_gating_sync(d.device, nil, &err)
+		C.frida_device_enable_spawn_gating_sync(d.device, nil, nil, &err)
 		if err != nil {
 			return &FError{err}
 		}
